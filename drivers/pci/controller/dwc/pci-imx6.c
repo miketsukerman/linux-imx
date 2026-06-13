@@ -1287,6 +1287,7 @@ static int imx_pcie_host_init(struct dw_pcie_rp *pp)
 	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
 	struct device *dev = pci->dev;
 	struct imx_pcie *imx_pcie = to_imx_pcie(pci);
+	int reset_gpio = -1;
 	int ret;
 
 	if (pp->bridge && imx_check_flag(imx_pcie, IMX_PCIE_FLAG_HAS_LUT)) {
@@ -1297,7 +1298,21 @@ static int imx_pcie_host_init(struct dw_pcie_rp *pp)
 	if (imx_pcie->drvdata->init_pre_reset)
 		imx_pcie->drvdata->init_pre_reset(imx_pcie);
 
+	if (imx_pcie->reset_gpiod)
+		reset_gpio = gpiod_get_value_cansleep(imx_pcie->reset_gpiod);
+
+	dev_info(dev,
+		 "pcie host init start: variant=%d mode=%s reset_gpio=%s level=%d max_link_speed=%u supports_clkreq=%d ext_refclk=%d\n",
+		 imx_pcie->drvdata->variant,
+		 imx_pcie->drvdata->mode == DW_PCIE_EP_TYPE ? "EP" : "RC",
+		 imx_pcie->reset_gpiod ? "present" : "absent",
+		 reset_gpio, pci->max_link_speed, imx_pcie->supports_clkreq,
+		 imx_pcie->enable_ext_refclk);
+
 	imx_pcie_assert_core_reset(imx_pcie);
+	if (imx_pcie->reset_gpiod)
+		dev_info(dev, "pcie reset asserted, gpio level=%d\n",
+			 gpiod_get_value_cansleep(imx_pcie->reset_gpiod));
 
 	if (imx_pcie->drvdata->init_phy)
 		imx_pcie->drvdata->init_phy(imx_pcie);
@@ -1307,6 +1322,7 @@ static int imx_pcie_host_init(struct dw_pcie_rp *pp)
 		dev_err(dev, "unable to enable pcie clocks: %d\n", ret);
 		return ret;
 	}
+	dev_info(dev, "pcie clocks enabled (%d clocks)\n", imx_pcie->num_clks);
 
 	imx_pcie_configure_type(imx_pcie);
 
@@ -1316,6 +1332,7 @@ static int imx_pcie_host_init(struct dw_pcie_rp *pp)
 			dev_err(dev, "pcie PHY power up failed\n");
 			goto err_clk_disable;
 		}
+		dev_info(dev, "pcie phy init done\n");
 
 		ret = phy_set_mode_ext(imx_pcie->phy, PHY_MODE_PCIE,
 				       imx_pcie->drvdata->mode == DW_PCIE_EP_TYPE ?
@@ -1324,12 +1341,15 @@ static int imx_pcie_host_init(struct dw_pcie_rp *pp)
 			dev_err(dev, "unable to set PCIe PHY mode\n");
 			goto err_phy_exit;
 		}
+		dev_info(dev, "pcie phy mode set (%s)\n",
+			 imx_pcie->drvdata->mode == DW_PCIE_EP_TYPE ? "EP" : "RC");
 
 		ret = phy_power_on(imx_pcie->phy);
 		if (ret) {
 			dev_err(dev, "waiting for PHY ready timeout!\n");
 			goto err_phy_exit;
 		}
+		dev_info(dev, "pcie phy power on complete\n");
 	}
 
 	/* Make sure that PCIe LTSSM is cleared */
@@ -1340,11 +1360,17 @@ static int imx_pcie_host_init(struct dw_pcie_rp *pp)
 		dev_err(dev, "pcie deassert core reset failed: %d\n", ret);
 		goto err_phy_off;
 	}
+	if (imx_pcie->reset_gpiod)
+		dev_info(dev, "pcie reset deasserted, gpio level=%d\n",
+			 gpiod_get_value_cansleep(imx_pcie->reset_gpiod));
 
 	if (imx_pcie->drvdata->wait_pll_lock) {
 		ret = imx_pcie->drvdata->wait_pll_lock(imx_pcie);
-		if (ret < 0)
+		if (ret < 0) {
+			dev_err(dev, "pcie pll lock wait failed: %d\n", ret);
 			goto err_phy_off;
+		}
+		dev_info(dev, "pcie pll lock done\n");
 	}
 
 	imx_setup_phy_mpll(imx_pcie);
@@ -2002,6 +2028,13 @@ static int imx_pcie_probe(struct platform_device *pdev)
 	pci->max_link_speed = 1;
 	of_property_read_u32(node, "fsl,max-link-speed", &pci->max_link_speed);
 	imx_pcie->supports_clkreq = of_property_read_bool(node, "supports-clkreq");
+	dev_info(dev,
+		 "pcie probe config: variant=%d mode=%s max_link_speed=%u supports_clkreq=%d reset_gpio=%s phy=%s\n",
+		 imx_pcie->drvdata->variant,
+		 imx_pcie->drvdata->mode == DW_PCIE_EP_TYPE ? "EP" : "RC",
+		 pci->max_link_speed, imx_pcie->supports_clkreq,
+		 imx_pcie->reset_gpiod ? "present" : "absent",
+		 imx_pcie->phy ? "present" : "absent");
 
 	ret = devm_regulator_get_enable_optional(&pdev->dev, "vpcie3v3aux");
 	if (ret < 0 && ret != -ENODEV)
