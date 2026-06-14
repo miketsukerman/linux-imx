@@ -114,7 +114,7 @@ static int imx8_pcie_phy_power_on(struct phy *phy)
 	struct device *dev = &phy->dev;
 
 	pad_mode = imx8_phy->refclk_pad_mode;
-	dev_info(dev, "pcie phy power_on start: variant=%d refclk_pad_mode=%u clkreq_unused=%d\n",
+	dev_dbg(dev, "pcie phy power_on start: variant=%d refclk_pad_mode=%u clkreq_unused=%d\n",
 		 imx8_phy->drvdata->variant, pad_mode, imx8_phy->clkreq_unused);
 	switch (imx8_phy->drvdata->variant) {
 	case IMX8MM:
@@ -179,7 +179,7 @@ static int imx8_pcie_phy_power_on(struct phy *phy)
 			   IMX8MM_GPR_PCIE_REF_CLK_EXT :
 			   IMX8MM_GPR_PCIE_REF_CLK_PLL);
 	regmap_read(imx8_phy->iomuxc_gpr, IOMUXC_GPR14, &val);
-	dev_info(dev, "pcie phy gpr14 configured: 0x%08x\n", val);
+	dev_dbg(dev, "pcie phy gpr14 configured: 0x%08x\n", val);
 	usleep_range(100, 200);
 
 	/*
@@ -239,7 +239,7 @@ static int imx8_pcie_phy_power_on(struct phy *phy)
 		dev_err(dev, "pcie phy pll ready timeout: ret=%d reg075=0x%08x\n",
 			ret, val);
 	else
-		dev_info(dev, "pcie phy pll ready: reg075=0x%08x\n", val);
+		dev_dbg(dev, "pcie phy pll ready: reg075=0x%08x\n", val);
 	return ret;
 }
 
@@ -250,7 +250,7 @@ static int imx8_pcie_phy_power_off(struct phy *phy)
 
 	reset_control_assert(imx8_phy->reset);
 	reset_control_assert(imx8_phy->perst);
-	dev_info(dev, "pcie phy power_off: reset asserted\n");
+	dev_dbg(dev, "pcie phy power_off: reset asserted\n");
 
 	return 0;
 }
@@ -262,7 +262,7 @@ static int imx8_pcie_phy_init(struct phy *phy)
 	int ret;
 
 	ret = clk_prepare_enable(imx8_phy->clk);
-	dev_info(dev, "pcie phy init: ref clock %s (%d)\n",
+	dev_dbg(dev, "pcie phy init: ref clock %s (%d)\n",
 		 ret ? "enable failed" : "enabled", ret);
 	return ret;
 }
@@ -273,7 +273,7 @@ static int imx8_pcie_phy_exit(struct phy *phy)
 	struct device *dev = &phy->dev;
 
 	clk_disable_unprepare(imx8_phy->clk);
-	dev_info(dev, "pcie phy exit: ref clock disabled\n");
+	dev_dbg(dev, "pcie phy exit: ref clock disabled\n");
 
 	return 0;
 }
@@ -344,7 +344,7 @@ static int imx8_pcie_phy_probe(struct platform_device *pdev)
 	else
 		imx8_phy->clkreq_unused = false;
 
-	dev_info(dev, "pcie phy probe: variant=%d refclk_pad_mode=%u clkreq_unused=%d\n",
+	dev_dbg(dev, "pcie phy probe: variant=%d refclk_pad_mode=%u clkreq_unused=%d\n",
 		 imx8_phy->drvdata->variant, imx8_phy->refclk_pad_mode,
 		 imx8_phy->clkreq_unused);
 

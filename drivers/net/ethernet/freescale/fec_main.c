@@ -4420,7 +4420,7 @@ fec_probe(struct platform_device *pdev)
 	int irq_cnt;
 	const struct fec_devinfo *dev_info;
 
-	dev_info(&pdev->dev, "fec probe start\n");
+	dev_dbg(&pdev->dev, "fec probe start\n");
 
 	fec_enet_get_queue_num(pdev, &num_tx_qs, &num_rx_qs);
 
@@ -4453,7 +4453,7 @@ fec_probe(struct platform_device *pdev)
 
 	/* Select default pin state */
 	pinctrl_pm_select_default_state(&pdev->dev);
-	dev_info(&pdev->dev, "fec pinctrl default selected\n");
+	dev_dbg(&pdev->dev, "fec pinctrl default selected\n");
 
 	fep->hwp = devm_platform_ioremap_resource(pdev, 0);
 	if (IS_ERR(fep->hwp)) {
@@ -4560,7 +4560,7 @@ fec_probe(struct platform_device *pdev)
 	ret = fec_enet_clk_enable(ndev, true);
 	if (ret)
 		goto failed_clk;
-	dev_info(&pdev->dev, "fec clocks enabled\n");
+	dev_dbg(&pdev->dev, "fec clocks enabled\n");
 
 	ret = clk_prepare_enable(fep->clk_ipg);
 	if (ret)
@@ -4594,7 +4594,7 @@ fec_probe(struct platform_device *pdev)
 	ret = fec_reset_phy(pdev);
 	if (ret)
 		goto failed_reset;
-	dev_info(&pdev->dev, "fec phy reset done\n");
+	dev_dbg(&pdev->dev, "fec phy reset done\n");
 
 	irq_cnt = fec_enet_get_irq_cnt(pdev);
 	if (fep->bufdesc_ex)
@@ -4631,7 +4631,7 @@ fec_probe(struct platform_device *pdev)
 	ret = fec_enet_mii_init(pdev);
 	if (ret)
 		goto failed_mii_init;
-	dev_info(&pdev->dev, "fec mdio bus registered\n");
+	dev_dbg(&pdev->dev, "fec mdio bus registered\n");
 
 	/* Carrier starts down, phylib will bring it up */
 	netif_carrier_off(ndev);
@@ -4651,7 +4651,7 @@ fec_probe(struct platform_device *pdev)
 	ret = register_netdev(ndev);
 	if (ret)
 		goto failed_register;
-	dev_info(&pdev->dev, "fec probe done\n");
+	dev_dbg(&pdev->dev, "fec probe done\n");
 
 	device_init_wakeup(&ndev->dev, fep->wol_flag &
 			   FEC_WOL_HAS_MAGIC_PACKET);

@@ -379,7 +379,7 @@ static int imx_dwmac_probe(struct platform_device *pdev)
 	const struct imx_dwmac_ops *data;
 	int ret;
 
-	dev_info(&pdev->dev, "eqos probe start\n");
+	dev_dbg(&pdev->dev, "eqos probe start\n");
 
 	ret = stmmac_get_platform_resources(pdev, &stmmac_res);
 	if (ret)
@@ -407,7 +407,7 @@ static int imx_dwmac_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to parse OF data\n");
 		return ret;
 	}
-	dev_info(&pdev->dev, "eqos dt parsed: phy-mode=%d tx_queues=%d\n",
+	dev_dbg(&pdev->dev, "eqos dt parsed: phy-mode=%d tx_queues=%d\n",
 		 plat_dat->phy_interface, plat_dat->tx_queues_to_use);
 
 	if (data->flags & STMMAC_FLAG_HWTSTAMP_CORRECT_LATENCY)
@@ -430,7 +430,7 @@ static int imx_dwmac_probe(struct platform_device *pdev)
 	ret = imx_dwmac_clks_config(dwmac, true);
 	if (ret)
 		return ret;
-	dev_info(&pdev->dev, "eqos clocks enabled\n");
+	dev_dbg(&pdev->dev, "eqos clocks enabled\n");
 
 	if (dwmac->ops->fix_mac_speed) {
 		plat_dat->fix_mac_speed = dwmac->ops->fix_mac_speed;
@@ -444,7 +444,7 @@ static int imx_dwmac_probe(struct platform_device *pdev)
 	ret = stmmac_pltfr_probe(pdev, plat_dat, &stmmac_res);
 	if (ret)
 		imx_dwmac_clks_config(dwmac, false);
-	dev_info(&pdev->dev, "eqos probe %s (%d)\n",
+	dev_dbg(&pdev->dev, "eqos probe %s (%d)\n",
 		 ret ? "failed" : "done", ret);
 
 	return ret;
