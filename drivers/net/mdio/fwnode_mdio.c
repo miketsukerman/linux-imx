@@ -7,8 +7,10 @@
  */
 
 #include <linux/acpi.h>
+#include <linux/delay.h>
 #include <linux/dev_printk.h>
 #include <linux/fwnode_mdio.h>
+#include <linux/gpio/consumer.h>
 #include <linux/of.h>
 #include <linux/phy.h>
 #include <linux/pse-pd/pse.h>
@@ -134,6 +136,33 @@ int fwnode_mdiobus_register_phy(struct mii_bus *bus,
 		return PTR_ERR(mii_ts);
 
 	is_c45 = fwnode_device_is_compatible(child, "ethernet-phy-ieee802.3-c45");
+
+	/*
+	 * Ensure any reset GPIO declared in the PHY node is deasserted before
+	 * we attempt to read the PHY ID over MDIO.  Boot firmware (e.g.
+	 * U-Boot) may have left the reset line asserted, which causes MDIO
+	 * reads to return 0xFFFF and the PHY to be silently skipped with an
+	 * "MDIO device missing" message.  Grab the GPIO, set it to the
+	 * inactive (deasserted) state, honour the reset-deassert-us delay,
+	 * then release the descriptor so the normal mdiobus_register_gpiod()
+	 * path can reclaim it later during PHY device registration.
+	 */
+	{
+		struct gpio_desc *reset_gpiod;
+		u32 deassert_delay_us = 0;
+
+		reset_gpiod = fwnode_gpiod_get_index(child, "reset", 0,
+						     GPIOD_OUT_LOW,
+						     "phy reset");
+		if (!IS_ERR_OR_NULL(reset_gpiod)) {
+			fwnode_property_read_u32(child, "reset-deassert-us",
+						 &deassert_delay_us);
+			if (deassert_delay_us)
+				fsleep(deassert_delay_us);
+			gpiod_put(reset_gpiod);
+		}
+	}
+
 	if (is_c45 || fwnode_get_phy_id(child, &phy_id))
 		phy = get_phy_device(bus, addr, is_c45);
 	else
