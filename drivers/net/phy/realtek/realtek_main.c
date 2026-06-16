@@ -159,6 +159,7 @@
 #define	RTL_MDIO_PCS_EEE_ABLE2			0xa6ec
 
 #define RTL_GENERIC_PHYID			0x001cc800
+#define RTL_8211F_PHYID				0x001cc916
 #define RTL_8211FVD_PHYID			0x001cc878
 #define RTL_8221B				0x001cc840
 #define RTL_8221B_VB_CG				0x001cc849
@@ -180,6 +181,16 @@ struct rtl821x_priv {
 	/* rtl8211f */
 	u16 iner;
 };
+
+static void rtl8211f_phy_fixup(struct phy_device *phydev)
+{
+	msleep(200);
+	phy_write(phydev, 0x1f, 0x0d04);
+	/* PHY LED OK */
+	phy_write(phydev, 0x10, 0xa050);
+	phy_write(phydev, 0x11, 0x0000);
+	phy_write(phydev, 0x1f, 0x0000);
+}
 
 static int rtl821x_read_page(struct phy_device *phydev)
 {
@@ -660,6 +671,9 @@ static int rtl8211f_config_init(struct phy_device *phydev)
 	ret = rtl8211f_config_rgmii_delay(phydev);
 	if (ret)
 		return ret;
+
+	if (phydev->drv->phy_id == RTL_8211F_PHYID)
+		rtl8211f_phy_fixup(phydev);
 
 	ret = rtl8211f_disable_clk_out(phydev);
 	if (ret) {
@@ -1797,7 +1811,7 @@ static struct phy_driver realtek_drvs[] = {
 		.led_hw_control_get = rtl8211e_led_hw_control_get,
 		.led_hw_control_set = rtl8211e_led_hw_control_set,
 	}, {
-		PHY_ID_MATCH_EXACT(0x001cc916),
+		PHY_ID_MATCH_EXACT(RTL_8211F_PHYID),
 		.name		= "RTL8211F Gigabit Ethernet",
 		.probe		= rtl8211f_probe,
 		.config_init	= &rtl8211f_config_init,
